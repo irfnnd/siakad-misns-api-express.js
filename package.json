@@ -12,13 +12,25 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-validator": "^7.3.0",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irfnnd/siakad-misns-api-express.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/irfnnd/siakad-misns-api-express.js/issues"
+  },
+  "homepage": "https://github.com/irfnnd/siakad-misns-api-express.js#readme"
 }

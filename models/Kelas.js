@@ -1,6 +1,6 @@
 // models/Kelas.js
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const sequelize = require('../config/database');
 
 const Kelas = sequelize.define('Kelas', {
   id: {
