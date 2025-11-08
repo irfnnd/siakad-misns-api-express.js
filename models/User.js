@@ -1,54 +1,44 @@
-// models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const bcrypt = require('bcryptjs');
 
 const User = sequelize.define('User', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
     primaryKey: true,
+    autoIncrement: true
   },
   username: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(50),
     allowNull: false,
-    unique: {
-      msg: 'Username sudah terdaftar'
+    unique: true
+  },
+  email: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true
     }
   },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false,
+  password_hash: {
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   role: {
-    type: DataTypes.ENUM('admin', 'guru'),
-    allowNull: false,
-    defaultValue: 'guru',
+    type: DataTypes.ENUM('Admin', 'Guru', 'Siswa'),
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.ENUM('Aktif', 'Nonaktif'),
+    defaultValue: 'Aktif'
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
-  // Foreign keys 'pegawai_id' dan 'siswa_id' akan ditambahkan oleh asosiasi
 }, {
   tableName: 'users',
-  hooks: {
-    // Hook (otomatis) untuk hash password sebelum user dibuat
-    beforeCreate: async (user) => {
-      if (user.password) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
-    },
-    // Hook untuk hash password sebelum user di-update
-    beforeUpdate: async (user) => {
-      if (user.changed('password')) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
-    }
-  }
+  timestamps: false
 });
-
-// Method tambahan untuk memvalidasi password saat login
-User.prototype.isValidPassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
-}
 
 module.exports = User;

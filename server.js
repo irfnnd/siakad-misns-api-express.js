@@ -1,22 +1,34 @@
 const app = require('./app');
 const { syncDatabase } = require('./utils/databaseSync');
+const sequelize = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
 
-// Sync database dan start server
 const startServer = async () => {
   try {
+    console.log('🚀 Starting Siakad SD Backend...');
+    
+    // Test koneksi database
+    await sequelize.authenticate();
+    console.log('✅ Database connected');
+    
     // Sinkronisasi database
     await syncDatabase();
     
     // Start server
     app.listen(PORT, () => {
-      console.log(`🚀 Server Siakad SD berjalan di port ${PORT}`);
+      console.log('\n✨ =================================');
+      console.log('✅ Siakad SD Backend berhasil dijalankan!');
+      console.log('✨ =================================');
+      console.log(`🌐 Server: http://localhost:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🌐 URL: http://localhost:${PORT}`);
+      console.log(`💾 Database: ${process.env.DB_NAME}`);
+      console.log(`👤 Default Admin: admin / admin123`);
+      console.log('✨ =================================\n');
     });
+    
   } catch (error) {
-    console.error('❌ Gagal memulai server:', error);
+    console.error('\n❌ Gagal memulai server:', error.message);
     process.exit(1);
   }
 };

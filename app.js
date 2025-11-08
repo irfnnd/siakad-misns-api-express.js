@@ -9,10 +9,10 @@ const { syncDatabase } = require('./utils/databaseSync');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const siswaRoutes = require('./routes/siswa');
-const pegawaiRoutes = require('./routes/pegawai');
-const kelasRoutes = require('./routes/kelas');
+// const userRoutes = require('./routes/users');
+// const siswaRoutes = require('./routes/siswa');
+// const pegawaiRoutes = require('./routes/pegawai');
+// const kelasRoutes = require('./routes/kelas');
 
 const app = express();
 
@@ -26,15 +26,13 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Test database connection
-testConnection();
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/siswa', siswaRoutes);
-app.use('/api/pegawai', pegawaiRoutes);
-app.use('/api/kelas', kelasRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/siswa', siswaRoutes);
+// app.use('/api/pegawai', pegawaiRoutes);
+// app.use('/api/kelas', kelasRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -46,12 +44,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint tidak ditemukan'
-  });
-});
+// app.all('.*', (req, res) => {
+//   res.status(404).json({
+//     success: false,
+//     message: 'Endpoint tidak ditemukan'
+//   });
+// });
 
 // Error handler
 app.use((error, req, res, next) => {

@@ -1,32 +1,47 @@
-// models/Siswa.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Siswa = sequelize.define('Siswa', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
     primaryKey: true,
+    autoIncrement: true
+  },
+  user_id: {
+    type: DataTypes.INTEGER,
+    unique: true
   },
   nama_lengkap: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING(100),
+    allowNull: false
   },
   nis: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(30),
     allowNull: false,
-    unique: true,
+    unique: true
   },
   nisn: {
-    type: DataTypes.STRING,
-    unique: true,
+    type: DataTypes.STRING(30),
+    allowNull: false,
+    unique: true
+  },
+  jenis_kelamin: {
+    type: DataTypes.ENUM('Laki-laki', 'Perempuan'),
+    allowNull: false
+  },
+  tanggal_lahir: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  telepon_ortu: {
+    type: DataTypes.STRING(20)
   },
   status: {
-    type: DataTypes.ENUM('aktif', 'lulus', 'pindah', 'dikeluarkan'),
-    defaultValue: 'aktif'
+    type: DataTypes.ENUM('Aktif', 'Lulus', 'Pindah'),
+    defaultValue: 'Aktif'
   }
-  // ... tambahkan kolom lain (tgl_lahir, alamat, nama_wali, dll)
-}, {
+}, 
+{
   tableName: 'siswa'
 });
 

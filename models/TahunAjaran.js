@@ -17,8 +17,7 @@ const TahunAjaran = sequelize.define('TahunAjaran', {
     defaultValue: 'Nonaktif'
   }
 }, {
-  tableName: 'tahun_ajaran',
-  timestamps: false
+  tableName: 'tahun_ajaran'
 });
 
 module.exports = TahunAjaran;

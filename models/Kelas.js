@@ -1,21 +1,31 @@
-// models/Kelas.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Kelas = sequelize.define('Kelas', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
     primaryKey: true,
+    autoIncrement: true
   },
   nama_kelas: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    type: DataTypes.STRING(20),
+    allowNull: false
   },
-  // ... (misal: 'tingkat', 'jurusan' jika ada)
+  tingkat: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 1,
+      max: 6
+    }
+  },
+  wali_kelas_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  }
 }, {
-  tableName: 'kelas'
+  tableName: 'kelas',
+  timestamps: false
 });
 
 module.exports = Kelas;
