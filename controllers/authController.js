@@ -1,10 +1,13 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Pegawai, Siswa } = require('../models');
+const { User, Pegawai } = require('../models');
 
 const login = async (req, res) => {
   try {
+    // Gunakan req.body, bukan query parameters
     const { username, password } = req.body;
+
+    console.log('Login attempt for username:', username);
 
     // Validasi input
     if (!username || !password) {
@@ -14,25 +17,46 @@ const login = async (req, res) => {
       });
     }
 
-    // Cari user
+    // Cari user - PERBAIKAN: gunakan 'as' dalam include
     const user = await User.findOne({ 
       where: { username },
       include: [
-        { model: Pegawai, required: false },
-        { model: Siswa, required: false }
-      ]
+        { 
+          model: Pegawai, 
+          as: 'pegawai', // TAMBAHKAN INI
+          required: false,
+          attributes: { exclude: ['user_id'] } // Optional: exclude user_id
+        }
+      ],
+      attributes: { exclude: ['password_hash'] } // Exclude password untuk sementara
     });
 
-    if (!user || user.status !== 'Aktif') {
+    if (!user) {
+      console.log('User not found:', username);
       return res.status(401).json({
         success: false,
         message: 'Username atau password salah'
       });
     }
 
+    if (user.status !== 'Aktif') {
+      return res.status(401).json({
+        success: false,
+        message: 'Akun tidak aktif'
+      });
+    }
+
+    // Untuk verifikasi password, kita perlu password_hash
+    // Jadi ambil user lagi dengan password_hash
+    const userWithPassword = await User.findOne({ 
+      where: { username },
+      attributes: ['id', 'password_hash'] // Hanya ambil field yang diperlukan
+    });
+
     // Verifikasi password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, userWithPassword.password_hash);
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', username);
       return res.status(401).json({
         success: false,
         message: 'Username atau password salah'
@@ -47,7 +71,7 @@ const login = async (req, res) => {
         role: user.role 
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
     // Data user untuk response
@@ -56,15 +80,16 @@ const login = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      created_at: user.created_at
     };
 
-    // Tambahkan data profil berdasarkan role
-    if (user.role === 'Guru' && user.Pegawai) {
-      userData.profile = user.Pegawai;
-    } else if (user.role === 'Siswa' && user.Siswa) {
-      userData.profile = user.Siswa;
+    // Tambahkan data profil jika role Guru
+    if (user.role === 'Guru' && user.pegawai) {
+      userData.profile = user.pegawai;
     }
+
+    console.log('Login successful for user:', username);
 
     res.json({
       success: true,
@@ -90,8 +115,11 @@ const getProfile = async (req, res) => {
 
     const user = await User.findByPk(userId, {
       include: [
-        { model: Pegawai, required: false },
-        { model: Siswa, required: false }
+        { 
+          model: Pegawai, 
+          as: 'pegawai', // TAMBAHKAN INI
+          required: false 
+        }
       ],
       attributes: { exclude: ['password_hash'] }
     });

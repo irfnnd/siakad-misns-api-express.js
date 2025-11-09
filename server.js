@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
-    console.log('🚀 Starting Siakad SD Backend...');
+    console.log('🚀 Starting Siakad MISNS Backend...');
     
     // Test koneksi database
     await sequelize.authenticate();
@@ -18,7 +18,7 @@ const startServer = async () => {
     // Start server
     app.listen(PORT, () => {
       console.log('\n✨ =================================');
-      console.log('✅ Siakad SD Backend berhasil dijalankan!');
+      console.log('✅ Siakad MISNS Backend berhasil dijalankan!');
       console.log('✨ =================================');
       console.log(`🌐 Server: http://localhost:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV}`);
