@@ -1,4 +1,4 @@
-const { User, Pegawai } = require('../models'); // Hapus Siswa dari import
+const { User, Pegawai } = require('../models');
 const bcrypt = require('bcryptjs');
 
 const userController = {
@@ -21,7 +21,6 @@ const userController = {
             as: 'pegawai',
             attributes: ['id', 'nama_lengkap', 'nip', 'jabatan']
           }
-          // Hapus include Siswa karena tidak ada role Siswa
         ],
         limit: parseInt(limit),
         offset: parseInt(offset),
@@ -54,14 +53,6 @@ const userController = {
     try {
       const { id } = req.params;
 
-      // Manual validation
-      if (!id || isNaN(id) || parseInt(id) < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID user tidak valid'
-        });
-      }
-
       const user = await User.findByPk(id, {
         attributes: { exclude: ['password_hash'] },
         include: [
@@ -70,7 +61,6 @@ const userController = {
             as: 'pegawai',
             attributes: { exclude: ['user_id'] }
           }
-          // Hapus include Siswa
         ]
       });
 
@@ -99,31 +89,29 @@ const userController = {
     try {
       const { username, email, password, role, status, profile_data } = req.body;
 
-      // Manual validation
-      const errors = [];
-      
-      if (!username || username.length < 3 || username.length > 50) {
-        errors.push('Username harus antara 3-50 karakter');
-      }
+      // Validasi tambahan untuk data profil Guru
+      if (role === 'Guru' && profile_data) {
+        const profileErrors = [];
+        
+        if (!profile_data.nip) {
+          profileErrors.push('NIP harus diisi untuk role Guru');
+        }
+        
+        if (!profile_data.nama_lengkap) {
+          profileErrors.push('Nama lengkap harus diisi untuk role Guru');
+        }
+        
+        if (!profile_data.jabatan) {
+          profileErrors.push('Jabatan harus diisi untuk role Guru');
+        }
 
-      if (!email || !/\S+@\S+\.\S+/.test(email)) {
-        errors.push('Email tidak valid');
-      }
-
-      if (!password || password.length < 6) {
-        errors.push('Password minimal 6 karakter');
-      }
-
-      if (!role || !['Admin', 'Guru'].includes(role)) {
-        errors.push('Role harus Admin atau Guru');
-      }
-
-      if (errors.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: errors
-        });
+        if (profileErrors.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Data profil tidak lengkap',
+            errors: profileErrors
+          });
+        }
       }
 
       // Check if username already exists
@@ -144,6 +132,17 @@ const userController = {
         });
       }
 
+      // Check if NIP already exists (untuk role Guru)
+      if (role === 'Guru' && profile_data && profile_data.nip) {
+        const existingNip = await Pegawai.findOne({ where: { nip: profile_data.nip } });
+        if (existingNip) {
+          return res.status(400).json({
+            success: false,
+            message: 'NIP sudah digunakan'
+          });
+        }
+      }
+
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -161,7 +160,7 @@ const userController = {
           created_at: new Date()
         }, { transaction });
 
-        // Create profile for Guru only (Admin tidak perlu profile Pegawai)
+        // Create profile for Guru only
         if (role === 'Guru' && profile_data) {
           await Pegawai.create({
             user_id: newUser.id,
@@ -197,11 +196,44 @@ const userController = {
       } catch (error) {
         // Rollback transaction if error
         await transaction.rollback();
+        
+        // Handle unique constraint errors
+        if (error.name === 'SequelizeUniqueConstraintError') {
+          const field = error.errors[0]?.path;
+          if (field === 'nip') {
+            return res.status(400).json({
+              success: false,
+              message: 'NIP sudah digunakan'
+            });
+          } else if (field === 'username') {
+            return res.status(400).json({
+              success: false,
+              message: 'Username sudah digunakan'
+            });
+          } else if (field === 'email') {
+            return res.status(400).json({
+              success: false,
+              message: 'Email sudah digunakan'
+            });
+          }
+        }
+        
         throw error;
       }
 
     } catch (error) {
       console.error('Create user error:', error);
+      
+      // Handle database errors
+      if (error.original && error.original.code === '23505') {
+        if (error.fields && error.fields.nip) {
+          return res.status(400).json({
+            success: false,
+            message: 'NIP sudah digunakan'
+          });
+        }
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Terjadi kesalahan server'
@@ -215,27 +247,11 @@ const userController = {
       const { id } = req.params;
       const { username, email, role, status, profile_data } = req.body;
 
-      // Manual validation untuk ID
-      if (!id || isNaN(id) || parseInt(id) < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID user tidak valid'
-        });
-      }
-
       const user = await User.findByPk(id);
       if (!user) {
         return res.status(404).json({
           success: false,
           message: 'User tidak ditemukan'
-        });
-      }
-
-      // Validation untuk role
-      if (role && !['Admin', 'Guru'].includes(role)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Role harus Admin atau Guru'
         });
       }
 
@@ -263,6 +279,22 @@ const userController = {
           return res.status(400).json({
             success: false,
             message: 'Email sudah digunakan'
+          });
+        }
+      }
+
+      // Check if NIP already exists (untuk role Guru, excluding current user)
+      if (role === 'Guru' && profile_data && profile_data.nip) {
+        const existingNip = await Pegawai.findOne({ 
+          where: { 
+            nip: profile_data.nip,
+            user_id: { [User.sequelize.Op.ne]: id }
+          }
+        });
+        if (existingNip) {
+          return res.status(400).json({
+            success: false,
+            message: 'NIP sudah digunakan'
           });
         }
       }
@@ -321,11 +353,34 @@ const userController = {
       } catch (error) {
         // Rollback transaction if error
         await transaction.rollback();
+        
+        // Handle unique constraint errors
+        if (error.name === 'SequelizeUniqueConstraintError') {
+          const field = error.errors[0]?.path;
+          if (field === 'nip') {
+            return res.status(400).json({
+              success: false,
+              message: 'NIP sudah digunakan'
+            });
+          }
+        }
+        
         throw error;
       }
 
     } catch (error) {
       console.error('Update user error:', error);
+      
+      // Handle database errors
+      if (error.original && error.original.code === '23505') {
+        if (error.fields && error.fields.nip) {
+          return res.status(400).json({
+            success: false,
+            message: 'NIP sudah digunakan'
+          });
+        }
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Terjadi kesalahan server'
@@ -338,21 +393,6 @@ const userController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
-
-      // Manual validation
-      if (!id || isNaN(id) || parseInt(id) < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID user tidak valid'
-        });
-      }
-
-      if (!status || !['Aktif', 'Nonaktif'].includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Status harus Aktif atau Nonaktif'
-        });
-      }
 
       const user = await User.findByPk(id);
       if (!user) {
@@ -387,28 +427,6 @@ const userController = {
     try {
       const { id } = req.params;
       const { current_password, new_password } = req.body;
-
-      // Manual validation
-      if (!id || isNaN(id) || parseInt(id) < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID user tidak valid'
-        });
-      }
-
-      if (!current_password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password saat ini harus diisi'
-        });
-      }
-
-      if (!new_password || new_password.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password baru minimal 6 karakter'
-        });
-      }
 
       const user = await User.findByPk(id);
       if (!user) {
@@ -450,14 +468,6 @@ const userController = {
   deleteUser: async (req, res) => {
     try {
       const { id } = req.params;
-
-      // Manual validation
-      if (!id || isNaN(id) || parseInt(id) < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID user tidak valid'
-        });
-      }
 
       const user = await User.findByPk(id);
       if (!user) {
