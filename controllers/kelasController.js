@@ -1,4 +1,5 @@
 const { Kelas, Pegawai, Siswa, SiswaDiKelas, Semester } = require('../models');
+const { Op } = require('sequelize'); // TAMBAHKAN INI
 
 const kelasController = {
   // Get all kelas dengan pagination
@@ -170,7 +171,7 @@ const kelasController = {
     }
   },
 
-  // Update kelas
+  // Update kelas - PERBAIKAN: gunakan Op dari sequelize
   updateKelas: async (req, res) => {
     try {
       const { id } = req.params;
@@ -196,12 +197,13 @@ const kelasController = {
       }
 
       // Check if kelas dengan nama yang sama sudah ada (excluding current kelas)
+      // PERBAIKAN: gunakan Op.ne dari sequelize
       if (nama_kelas && tingkat) {
         const existingKelas = await Kelas.findOne({ 
           where: { 
             nama_kelas,
             tingkat: parseInt(tingkat),
-            id: { [Kelas.sequelize.Op.ne]: id }
+            id: { [Op.ne]: id } // PERBAIKAN DI SINI
           } 
         });
         if (existingKelas) {
@@ -293,33 +295,11 @@ const kelasController = {
         tingkatCounts[`tingkat_${i}`] = await Kelas.count({ where: { tingkat: i } });
       }
 
-      // Count siswa per kelas
-      const kelasWithSiswaCount = await Kelas.findAll({
-        attributes: [
-          'id',
-          'nama_kelas',
-          'tingkat',
-          [Kelas.sequelize.fn('COUNT', Kelas.sequelize.col('siswa.id')), 'jumlah_siswa']
-        ],
-        include: [
-          {
-            model: Siswa,
-            as: 'siswa',
-            through: { attributes: [] },
-            attributes: [],
-            required: false
-          }
-        ],
-        group: ['Kelas.id', 'Kelas.nama_kelas', 'Kelas.tingkat'],
-        raw: true
-      });
-
       res.json({
         success: true,
         data: {
           total_kelas: totalKelas,
-          by_tingkat: tingkatCounts,
-          detail_kelas: kelasWithSiswaCount
+          by_tingkat: tingkatCounts
         }
       });
     } catch (error) {

@@ -58,6 +58,19 @@ const setupAssociations = () => {
   // Kelas associations
   Kelas.belongsTo(Pegawai, { foreignKey: 'wali_kelas_id', as: 'wali_kelas' });
   Pegawai.hasMany(Kelas, { foreignKey: 'wali_kelas_id', as: 'kelas' });
+  Kelas.belongsToMany(Siswa, { 
+    through: SiswaDiKelas, 
+    foreignKey: 'kelas_id',
+    otherKey: 'siswa_id',
+    as: 'siswa'  // Ini yang dibutuhkan di controller
+  });
+  
+  Siswa.belongsToMany(Kelas, { 
+    through: SiswaDiKelas, 
+    foreignKey: 'siswa_id',
+    otherKey: 'kelas_id', 
+    as: 'kelas'
+  });
 
   // SiswaDiKelas associations
   SiswaDiKelas.belongsTo(Siswa, { foreignKey: 'siswa_id', as: 'siswa' });
