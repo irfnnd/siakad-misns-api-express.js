@@ -10,7 +10,7 @@ const { syncDatabase } = require('./utils/databaseSync');
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
-// const siswaRoutes = require('./routes/siswa');
+const siswaRoutes = require('./routes/siswa');
 // const pegawaiRoutes = require('./routes/pegawai');
 // const kelasRoutes = require('./routes/kelas');
 
@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-// app.use('/api/siswa', siswaRoutes);
+app.use('/api/siswa', siswaRoutes);
 // app.use('/api/pegawai', pegawaiRoutes);
 // app.use('/api/kelas', kelasRoutes);
 
