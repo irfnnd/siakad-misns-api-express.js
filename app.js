@@ -12,7 +12,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const siswaRoutes = require('./routes/siswa');
 // const pegawaiRoutes = require('./routes/pegawai');
-// const kelasRoutes = require('./routes/kelas');
+const kelasRoutes = require('./routes/kelas');
 
 const app = express();
 
@@ -32,7 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/siswa', siswaRoutes);
 // app.use('/api/pegawai', pegawaiRoutes);
-// app.use('/api/kelas', kelasRoutes);
+app.use('/api/kelas', kelasRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
