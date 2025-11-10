@@ -14,6 +14,9 @@ const siswaRoutes = require('./routes/siswa');
 // const pegawaiRoutes = require('./routes/pegawai');
 const kelasRoutes = require('./routes/kelas');
 const mataPelajaranRoutes = require('./routes/mataPelajaran');
+const tahunAjaranRoutes = require('./routes/tahunAjaran');
+const semesterRoutes = require('./routes/semester');
+
 const app = express();
 
 // Middleware
@@ -34,6 +37,8 @@ app.use('/api/siswa', siswaRoutes);
 // app.use('/api/pegawai', pegawaiRoutes);
 app.use('/api/kelas', kelasRoutes);
 app.use('/api/mata-pelajaran', mataPelajaranRoutes);
+app.use('/api/tahun-ajaran', tahunAjaranRoutes);
+app.use('/api/semester', semesterRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
