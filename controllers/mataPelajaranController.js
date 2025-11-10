@@ -44,7 +44,7 @@ const mataPelajaranController = {
     }
   },
 
-  // Get mata pelajaran by ID
+   // Get mata pelajaran by ID dengan associations yang benar
   getMataPelajaranById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -53,7 +53,7 @@ const mataPelajaranController = {
         include: [
           {
             model: Pengajaran,
-            as: 'pengajaran',
+            as: 'pengajaran', // Gunakan alias yang benar
             include: [
               {
                 model: Kelas,
@@ -84,6 +84,94 @@ const mataPelajaranController = {
       });
     } catch (error) {
       console.error('Get mata pelajaran by ID error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan server'
+      });
+    }
+  },
+
+  // Get mata pelajaran statistics dengan associations yang benar
+  getMataPelajaranStats: async (req, res) => {
+    try {
+      const totalMapel = await MataPelajaran.count();
+
+      // Count pengajaran per mata pelajaran dengan alias yang benar
+      const mapelWithPengajaranCount = await MataPelajaran.findAll({
+        attributes: [
+          'id',
+          'kode_mapel',
+          'nama_mapel',
+          [MataPelajaran.sequelize.fn('COUNT', MataPelajaran.sequelize.col('pengajaran.id')), 'jumlah_pengajaran']
+        ],
+        include: [
+          {
+            model: Pengajaran,
+            as: 'pengajaran', // Gunakan alias yang benar
+            attributes: [],
+            required: false
+          }
+        ],
+        group: ['MataPelajaran.id', 'MataPelajaran.kode_mapel', 'MataPelajaran.nama_mapel'],
+        raw: true
+      });
+
+      res.json({
+        success: true,
+        data: {
+          total_mapel: totalMapel,
+          detail_mapel: mapelWithPengajaranCount
+        }
+      });
+    } catch (error) {
+      console.error('Get mata pelajaran stats error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan server'
+      });
+    }
+  },
+
+  // Delete mata pelajaran dengan pengecekan yang benar
+  deleteMataPelajaran: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const mataPelajaran = await MataPelajaran.findByPk(id);
+      if (!mataPelajaran) {
+        return res.status(404).json({
+          success: false,
+          message: 'Mata pelajaran tidak ditemukan'
+        });
+      }
+
+      // Check if mata pelajaran digunakan di pengajaran
+      const pengajaranCount = await Pengajaran.count({ where: { mapel_id: id } });
+      if (pengajaranCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam pengajaran'
+        });
+      }
+
+      // Check if mata pelajaran digunakan di nilai rapor (dengan alias baru)
+      const nilaiRaporCount = await NilaiRapor.count({ where: { mapel_id: id } });
+      if (nilaiRaporCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam nilai rapor'
+        });
+      }
+
+      await MataPelajaran.destroy({ where: { id } });
+
+      res.json({
+        success: true,
+        message: 'Mata pelajaran berhasil dihapus'
+      });
+
+    } catch (error) {
+      console.error('Delete mata pelajaran error:', error);
       res.status(500).json({
         success: false,
         message: 'Terjadi kesalahan server'
@@ -275,46 +363,6 @@ const mataPelajaranController = {
     }
   },
 
-  // Get mata pelajaran statistics
-  getMataPelajaranStats: async (req, res) => {
-    try {
-      const totalMapel = await MataPelajaran.count();
-
-      // Count pengajaran per mata pelajaran
-      const mapelWithPengajaranCount = await MataPelajaran.findAll({
-        attributes: [
-          'id',
-          'kode_mapel',
-          'nama_mapel',
-          [MataPelajaran.sequelize.fn('COUNT', MataPelajaran.sequelize.col('pengajaran.id')), 'jumlah_pengajaran']
-        ],
-        include: [
-          {
-            model: Pengajaran,
-            as: 'pengajaran',
-            attributes: [],
-            required: false
-          }
-        ],
-        group: ['MataPelajaran.id', 'MataPelajaran.kode_mapel', 'MataPelajaran.nama_mapel'],
-        raw: true
-      });
-
-      res.json({
-        success: true,
-        data: {
-          total_mapel: totalMapel,
-          detail_mapel: mapelWithPengajaranCount
-        }
-      });
-    } catch (error) {
-      console.error('Get mata pelajaran stats error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Terjadi kesalahan server'
-      });
-    }
-  },
 
   // Search mata pelajaran
   searchMataPelajaran: async (req, res) => {

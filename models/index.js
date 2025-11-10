@@ -91,6 +91,38 @@ const setupAssociations = () => {
   AbsensiHarian.belongsTo(Siswa, { foreignKey: 'siswa_id', as: 'siswa' });
   AbsensiHarian.belongsTo(Semester, { foreignKey: 'semester_id', as: 'semester' });
 
+  MataPelajaran.hasMany(Pengajaran, { 
+    foreignKey: 'mapel_id', 
+    as: 'pengajaran' 
+  });
+  
+  Pengajaran.belongsTo(MataPelajaran, { 
+    foreignKey: 'mapel_id', 
+    as: 'mata_pelajaran_mapel' 
+  });
+
+  // MataPelajaran - NilaiRapor associations
+  MataPelajaran.hasMany(NilaiRapor, { 
+    foreignKey: 'mapel_id', 
+    as: 'nilai_rapor_mapel' 
+  });
+  
+  NilaiRapor.belongsTo(MataPelajaran, { 
+    foreignKey: 'mapel_id', 
+    as: 'mata_pelajaran_nilai' 
+  });
+
+  // MataPelajaran - JadwalPelajaran associations
+  MataPelajaran.hasMany(JadwalPelajaran, { 
+    foreignKey: 'mapel_id', 
+    as: 'jadwal_mapel' 
+  });
+  
+  JadwalPelajaran.belongsTo(MataPelajaran, { 
+    foreignKey: 'mapel_id', 
+    as: 'mata_pelajaran_jadwal' 
+  });
+
   // Pengajaran associations
   Pengajaran.belongsTo(Pegawai, { foreignKey: 'guru_id', as: 'guru' });
   Pengajaran.belongsTo(MataPelajaran, { foreignKey: 'mapel_id', as: 'mata_pelajaran' });
