@@ -13,7 +13,7 @@ const userRoutes = require('./routes/users');
 const siswaRoutes = require('./routes/siswa');
 // const pegawaiRoutes = require('./routes/pegawai');
 const kelasRoutes = require('./routes/kelas');
-
+const mataPelajaranRoutes = require('./routes/mataPelajaran');
 const app = express();
 
 // Middleware
@@ -33,6 +33,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/siswa', siswaRoutes);
 // app.use('/api/pegawai', pegawaiRoutes);
 app.use('/api/kelas', kelasRoutes);
+app.use('/api/mata-pelajaran', mataPelajaranRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
