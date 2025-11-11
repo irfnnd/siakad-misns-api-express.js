@@ -16,6 +16,7 @@ const kelasRoutes = require('./routes/kelas');
 const mataPelajaranRoutes = require('./routes/mataPelajaran');
 const tahunAjaranRoutes = require('./routes/tahunAjaran');
 const semesterRoutes = require('./routes/semester');
+const jadwalPelajaranRoutes = require('./routes/jadwalPelajaran');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/kelas', kelasRoutes);
 app.use('/api/mata-pelajaran', mataPelajaranRoutes);
 app.use('/api/tahun-ajaran', tahunAjaranRoutes);
 app.use('/api/semester', semesterRoutes);
+app.use('/api/jadwal-pelajaran', jadwalPelajaranRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
