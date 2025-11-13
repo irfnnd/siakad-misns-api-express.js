@@ -1,4 +1,4 @@
-const { JadwalPelajaran, Kelas, MataPelajaran, Pegawai, Semester } = require('../models');
+const { JadwalPelajaran, Kelas, MataPelajaran, Pegawai, Semester, TahunAjaran } = require('../models');
 const { Op } = require('sequelize');
 
 const jadwalPelajaranController = {
@@ -322,7 +322,7 @@ const jadwalPelajaranController = {
     }
   },
 
-  // Update jadwal pelajaran
+// Update jadwal pelajaran dengan validasi lengkap
   updateJadwalPelajaran: async (req, res) => {
     try {
       const { id } = req.params;
@@ -359,6 +359,50 @@ const jadwalPelajaranController = {
           success: false,
           message: 'Jam mulai harus sebelum jam selesai'
         });
+      }
+
+      // ✅ TAMBAHKAN VALIDASI: Check if guru exists jika guru_id diupdate
+      if (guru_id) {
+        const guru = await Pegawai.findByPk(guru_id);
+        if (!guru) {
+          return res.status(400).json({
+            success: false,
+            message: 'Guru tidak ditemukan'
+          });
+        }
+      }
+
+      // ✅ TAMBAHKAN VALIDASI: Check if mata pelajaran exists jika mapel_id diupdate
+      if (mapel_id) {
+        const mataPelajaran = await MataPelajaran.findByPk(mapel_id);
+        if (!mataPelajaran) {
+          return res.status(400).json({
+            success: false,
+            message: 'Mata pelajaran tidak ditemukan'
+          });
+        }
+      }
+
+      // ✅ TAMBAHKAN VALIDASI: Check if kelas exists jika kelas_id diupdate
+      if (kelas_id) {
+        const kelas = await Kelas.findByPk(kelas_id);
+        if (!kelas) {
+          return res.status(400).json({
+            success: false,
+            message: 'Kelas tidak ditemukan'
+          });
+        }
+      }
+
+      // ✅ TAMBAHKAN VALIDASI: Check if semester exists jika semester_id diupdate
+      if (semester_id) {
+        const semester = await Semester.findByPk(semester_id);
+        if (!semester) {
+          return res.status(400).json({
+            success: false,
+            message: 'Semester tidak ditemukan'
+          });
+        }
       }
 
       // Check for schedule conflict (excluding current jadwal)
@@ -446,6 +490,33 @@ const jadwalPelajaranController = {
 
     } catch (error) {
       console.error('Update jadwal pelajaran error:', error);
+      
+      // ✅ TAMBAHKAN ERROR HANDLING untuk foreign key constraint
+      if (error.name === 'SequelizeForeignKeyConstraintError') {
+        const constraint = error.index;
+        if (constraint === 'jadwal_pelajaran_guru_id_fkey') {
+          return res.status(400).json({
+            success: false,
+            message: 'Guru tidak ditemukan'
+          });
+        } else if (constraint === 'jadwal_pelajaran_kelas_id_fkey') {
+          return res.status(400).json({
+            success: false,
+            message: 'Kelas tidak ditemukan'
+          });
+        } else if (constraint === 'jadwal_pelajaran_mapel_id_fkey') {
+          return res.status(400).json({
+            success: false,
+            message: 'Mata pelajaran tidak ditemukan'
+          });
+        } else if (constraint === 'jadwal_pelajaran_semester_id_fkey') {
+          return res.status(400).json({
+            success: false,
+            message: 'Semester tidak ditemukan'
+          });
+        }
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Terjadi kesalahan server'
