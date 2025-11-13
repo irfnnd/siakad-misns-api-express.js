@@ -58,13 +58,16 @@ const setupAssociations = () => {
   // Kelas associations
   Kelas.belongsTo(Pegawai, { foreignKey: 'wali_kelas_id', as: 'wali_kelas' });
   Pegawai.hasMany(Kelas, { foreignKey: 'wali_kelas_id', as: 'kelas' });
+ // models/index.js - Buat konsisten dengan controller
+
+  // Many-to-Many associations
   Kelas.belongsToMany(Siswa, { 
     through: SiswaDiKelas, 
     foreignKey: 'kelas_id',
     otherKey: 'siswa_id',
-    as: 'siswa'  // Ini yang dibutuhkan di controller
+    as: 'siswa'
   });
-  
+
   Siswa.belongsToMany(Kelas, { 
     through: SiswaDiKelas, 
     foreignKey: 'siswa_id',
@@ -72,14 +75,15 @@ const setupAssociations = () => {
     as: 'kelas'
   });
 
-  // SiswaDiKelas associations
+  // SiswaDiKelas associations - GUNAKAN ALIAS YANG SAMA
   SiswaDiKelas.belongsTo(Siswa, { foreignKey: 'siswa_id', as: 'siswa' });
   SiswaDiKelas.belongsTo(Kelas, { foreignKey: 'kelas_id', as: 'kelas' });
   SiswaDiKelas.belongsTo(Semester, { foreignKey: 'semester_id', as: 'semester' });
 
-  Siswa.hasMany(SiswaDiKelas, { foreignKey: 'siswa_id', as: 'kelas_assignments' });
-  Kelas.hasMany(SiswaDiKelas, { foreignKey: 'kelas_id', as: 'siswa_assignments' });
-  Semester.hasMany(SiswaDiKelas, { foreignKey: 'semester_id', as: 'siswa_kelas' });
+  // HasMany associations - GUNAKAN ALIAS YANG SAMA
+  Siswa.hasMany(SiswaDiKelas, { foreignKey: 'siswa_id', as: 'siswa_di_kelas' });
+  Kelas.hasMany(SiswaDiKelas, { foreignKey: 'kelas_id', as: 'siswa_di_kelas' });
+  Semester.hasMany(SiswaDiKelas, { foreignKey: 'semester_id', as: 'siswa_di_kelas' });
 
   // Jadwal Pelajaran associations
   JadwalPelajaran.belongsTo(Kelas, { foreignKey: 'kelas_id', as: 'kelas' });
