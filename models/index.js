@@ -163,11 +163,11 @@ const setupAssociations = () => {
   MataPelajaran.hasMany(NilaiRapor, { foreignKey: 'mapel_id', as: 'nilai_rapor' });
 
   // Nilai Ekstrakurikuler associations
-  NilaiEkskulSiswa.belongsTo(Rapor, { foreignKey: 'rapor_id', as: 'rapor' });
-  NilaiEkskulSiswa.belongsTo(Ekstrakurikuler, { foreignKey: 'ekskul_id', as: 'ekstrakurikuler' });
+  NilaiEkskulSiswa.belongsTo(Rapor, { foreignKey: 'rapor_id', as: 'rapor' , constraints: false});
+  NilaiEkskulSiswa.belongsTo(Ekstrakurikuler, { foreignKey: 'ekskul_id', as: 'ekstrakurikuler', constraints: false });
 
-  Rapor.hasMany(NilaiEkskulSiswa, { foreignKey: 'rapor_id', as: 'nilai_ekskul' });
-  Ekstrakurikuler.hasMany(NilaiEkskulSiswa, { foreignKey: 'ekskul_id', as: 'nilai_siswa' });
+  Rapor.hasMany(NilaiEkskulSiswa, { foreignKey: 'rapor_id', as: 'nilai_ekskul', constraints: false });
+  Ekstrakurikuler.hasMany(NilaiEkskulSiswa, { foreignKey: 'ekskul_id', as: 'nilai_siswa' , constraints: false });
 };
 
 // Setup associations

@@ -25,6 +25,8 @@ const penilaianRoutes = require('./routes/penilaian');
 const nilaiRoutes = require('./routes/nilai');
 const raporRoutes = require('./routes/rapor');
 const nilaiRaporRoutes = require('./routes/nilaiRapor');
+const ekstrakurikulerRoutes = require('./routes/ekstrakurikuler');
+const nilaiEkstrakurikulerRoutes = require('./routes/nilaiEkstrakurikuler');
 
 
 const app = express();
@@ -58,6 +60,8 @@ app.use('/api/penilaian', penilaianRoutes);
 app.use('/api/nilai', nilaiRoutes);
 app.use('/api/rapor', raporRoutes);
 app.use('/api/nilai-rapor', nilaiRaporRoutes);
+app.use('/api/ekstrakurikuler', ekstrakurikulerRoutes);
+app.use('/api/nilai-ekstrakurikuler', nilaiEkstrakurikulerRoutes);
 
 
 // Health check
