@@ -22,6 +22,7 @@ const siswaDiKelasRoutes = require('./routes/siswaDiKelas');
 const pengajaranRoutes = require('./routes/pengajaran');
 const konfigurasiBobotRoutes = require('./routes/konfigurasiBobot');
 const penilaianRoutes = require('./routes/penilaian');
+const nilaiRoutes = require('./routes/nilai');
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/siswa-di-kelas', siswaDiKelasRoutes);
 app.use('/api/pengajaran', pengajaranRoutes);
 app.use('/api/konfigurasi-bobot', konfigurasiBobotRoutes);
 app.use('/api/penilaian', penilaianRoutes);
+app.use('/api/nilai', nilaiRoutes);
 
 
 // Health check
