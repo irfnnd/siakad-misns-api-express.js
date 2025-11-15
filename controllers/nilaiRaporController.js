@@ -38,7 +38,7 @@ const getAllNilaiRapor = async (req, res) => {
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [[MataPelajaran, 'nama_mapel', 'ASC']]
+      order: [['mata_pelajaran', 'nama_mapel', 'ASC']]
     });
 
     res.json({
@@ -126,7 +126,7 @@ const getNilaiRaporByRapor = async (req, res) => {
           attributes: ['id', 'kode_mapel', 'nama_mapel']
         }
       ],
-      order: [[MataPelajaran, 'nama_mapel', 'ASC']]
+      order: [['mata_pelajaran', 'nama_mapel', 'ASC']]
     });
 
     res.json({

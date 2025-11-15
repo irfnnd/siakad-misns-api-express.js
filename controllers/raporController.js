@@ -163,7 +163,7 @@ const getRaporBySiswa = async (req, res) => {
           ]
         }
       ],
-      order: [[Semester, 'id', 'DESC']]
+      order: [['semester', 'id', 'DESC']]
     });
 
     res.json({
@@ -216,7 +216,7 @@ const getRaporBySiswaSemester = async (req, res) => {
               attributes: ['id', 'kode_mapel', 'nama_mapel']
             }
           ],
-          order: [[MataPelajaran, 'nama_mapel', 'ASC']]
+          order: [['mata_pelajaran', 'nama_mapel', 'ASC']]
         }
       ]
     });
