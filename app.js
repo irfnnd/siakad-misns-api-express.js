@@ -20,6 +20,7 @@ const jadwalPelajaranRoutes = require('./routes/jadwalPelajaran');
 const absensiHarianRoutes = require('./routes/absensiHarian');
 const siswaDiKelasRoutes = require('./routes/siswaDiKelas');
 const pengajaranRoutes = require('./routes/pengajaran');
+const konfigurasiBobotRoutes = require('./routes/konfigurasiBobot');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/jadwal-pelajaran', jadwalPelajaranRoutes);
 app.use('/api/absensi-harian', absensiHarianRoutes);
 app.use('/api/siswa-di-kelas', siswaDiKelasRoutes);
 app.use('/api/pengajaran', pengajaranRoutes);
+app.use('/api/konfigurasi-bobot', konfigurasiBobotRoutes);
 
 
 // Health check
