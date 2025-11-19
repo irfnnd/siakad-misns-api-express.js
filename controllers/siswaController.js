@@ -1,5 +1,5 @@
-const { Siswa, User, Kelas, SiswaDiKelas, Semester } = require('../models');
-const bcrypt = require('bcryptjs');
+const { Siswa, User, Kelas, SiswaDiKelas, Semester } = require("../models");
+const bcrypt = require("bcryptjs");
 
 const siswaController = {
   // Get all siswa dengan pagination
@@ -11,25 +11,32 @@ const siswaController = {
       const whereClause = {};
       if (status) whereClause.status = status;
 
-      // Jika filter by kelas, join dengan SiswaDiKelas
       let includeClause = [
         {
           model: User,
           as: 'user',
-          attributes: ['username', 'email', 'status'],
-          required: false
+          attributes: ['id', 'username', 'email'],
+          required: false // Left Join (User boleh null)
         }
       ];
 
       if (kelas_id) {
         includeClause.push({
           model: Kelas,
-          as: 'kelas',
-          through: { 
-            where: { kelas_id },
-            attributes: [] 
+          as: "kelas", // Alias harus sama dengan di models/index.js
+          required: true, // INNER JOIN: Hanya ambil siswa yang punya kelas ini
+          through: {
+            attributes: [], // Jangan tampilkan data tabel pivot
+            where: { kelas_id: kelas_id }, // Filter spesifik ID kelas di tabel pivot
           },
-          required: true
+        });
+      } else {
+        // Jika tidak difilter, tetap tampilkan info kelas (opsional)
+        includeClause.push({
+          model: Kelas,
+          as: "kelas",
+          required: false, // LEFT JOIN: Tampilkan siswa meski belum punya kelas
+          through: { attributes: [] },
         });
       }
 
@@ -38,7 +45,7 @@ const siswaController = {
         include: includeClause,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['nama_lengkap', 'ASC']]
+        order: [["nama_lengkap", "ASC"]],
       });
 
       res.json({
@@ -49,15 +56,15 @@ const siswaController = {
             currentPage: parseInt(page),
             totalPages: Math.ceil(siswa.count / limit),
             totalItems: siswa.count,
-            itemsPerPage: parseInt(limit)
-          }
-        }
+            itemsPerPage: parseInt(limit),
+          },
+        },
       });
     } catch (error) {
-      console.error('Get all siswa error:', error);
+      console.error("Get all siswa error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -70,208 +77,143 @@ const siswaController = {
       const siswa = await Siswa.findByPk(id, {
         include: [
           {
-            model: User,
-            as: 'user',
-            attributes: { exclude: ['password_hash'] },
-            required: false
-          },
-          {
             model: Kelas,
-            as: 'kelas',
+            as: "kelas",
             through: { attributes: [] },
-            required: false
-          }
-        ]
+            required: false,
+          },
+        ],
       });
 
       if (!siswa) {
         return res.status(404).json({
           success: false,
-          message: 'Siswa tidak ditemukan'
+          message: "Siswa tidak ditemukan",
         });
       }
 
       res.json({
         success: true,
-        data: siswa
+        data: siswa,
       });
     } catch (error) {
-      console.error('Get siswa by ID error:', error);
+      console.error("Get siswa by ID error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
 
-  // Create new siswa
-  createSiswa: async (req, res) => {
+createSiswa: async (req, res) => {
     try {
-      const { 
-        nama_lengkap, 
-        nis, 
-        nisn, 
-        jenis_kelamin, 
-        tanggal_lahir, 
-        telepon_ortu, 
+      const {
+        nama_lengkap,
+        nis,
+        nisn,
+        jenis_kelamin,
+        tempat_lahir,
+        tanggal_lahir,
+        telepon_ortu,
+        alamat,
         status,
-        username,
-        email,
-        password 
+        user_id,
+        kelas // <--- AMBIL DATA KELAS (String, misal "1A")
       } = req.body;
 
       // Validasi manual
       const errors = [];
-      
-      if (!nama_lengkap) errors.push('Nama lengkap harus diisi');
-      if (!nis) errors.push('NIS harus diisi');
-      if (!nisn) errors.push('NISN harus diisi');
-      if (!jenis_kelamin) errors.push('Jenis kelamin harus diisi');
-      if (!tanggal_lahir) errors.push('Tanggal lahir harus diisi');
+      if (!nama_lengkap) errors.push("Nama lengkap harus diisi");
+      if (!nis) errors.push("NIS harus diisi");
+      if (!jenis_kelamin) errors.push("Jenis kelamin harus diisi");
+      if (!tanggal_lahir) errors.push("Tanggal lahir harus diisi");
 
       if (errors.length > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Data tidak valid',
-          errors: errors
+          message: "Data tidak valid",
+          errors: errors,
         });
       }
 
-      // Check if NIS already exists
+      // Cek NIS Duplicate
       const existingNis = await Siswa.findOne({ where: { nis } });
-      if (existingNis) {
-        return res.status(400).json({
-          success: false,
-          message: 'NIS sudah digunakan'
-        });
+      if (existingNis) return res.status(400).json({ success: false, message: "NIS sudah digunakan" });
+
+      // Cek NISN Duplicate
+      if (nisn) {
+        const existingNisn = await Siswa.findOne({ where: { nisn } });
+        if (existingNisn) return res.status(400).json({ success: false, message: "NISN sudah digunakan" });
       }
 
-      // Check if NISN already exists
-      const existingNisn = await Siswa.findOne({ where: { nisn } });
-      if (existingNisn) {
-        return res.status(400).json({
-          success: false,
-          message: 'NISN sudah digunakan'
-        });
-      }
-
-      // Jika ada data user (username, email, password)
-      let user_id = null;
-      if (username && email && password) {
-        // Check if username already exists
-        const existingUsername = await User.findOne({ where: { username } });
-        if (existingUsername) {
-          return res.status(400).json({
-            success: false,
-            message: 'Username sudah digunakan'
-          });
-        }
-
-        // Check if email already exists
-        const existingEmail = await User.findOne({ where: { email } });
-        if (existingEmail) {
-          return res.status(400).json({
-            success: false,
-            message: 'Email sudah digunakan'
-          });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 12);
-
-        // Create user
-        const newUser = await User.create({
-          username,
-          email,
-          password_hash: hashedPassword,
-          role: 'Siswa',
-          status: 'Aktif',
-          created_at: new Date()
-        });
-
-        user_id = newUser.id;
-      }
-
-      // Start transaction
+      // Mulai Transaksi Database
       const transaction = await Siswa.sequelize.transaction();
 
       try {
-        // Create siswa
-        const newSiswa = await Siswa.create({
-          user_id,
-          nama_lengkap,
-          nis,
-          nisn,
-          jenis_kelamin,
-          tanggal_lahir,
-          telepon_ortu,
-          status: status || 'Aktif'
-        }, { transaction });
+        // 1. Buat Data Siswa
+        const newSiswa = await Siswa.create(
+          {
+            nama_lengkap,
+            nis,
+            nisn,
+            jenis_kelamin,
+            tempat_lahir,
+            tanggal_lahir,
+            telepon_ortu,
+            alamat,
+            status: status || "Aktif",
+          },
+          { transaction }
+        );
+
+        // 2. LOGIKA TAMBAHAN: HUBUNGKAN KE KELAS
+        if (kelas) {
+          // Cari ID Kelas berdasarkan nama (karena frontend kirim "1A", "1B")
+          const kelasInstance = await Kelas.findOne({ where: { nama_kelas: kelas } });
+          
+          if (kelasInstance) {
+            // Gunakan method magic Sequelize 'setKelas' (karena relasi many-to-many)
+            // Kita set semester_id: 1 sebagai default sementara
+            await newSiswa.setKelas([kelasInstance], { 
+                through: { semester_id: 1 }, 
+                transaction 
+            });
+          }
+        }
 
         await transaction.commit();
 
-        // Get created siswa with relations
+        // 3. Ambil data siswa yang baru dibuat BESERTA RELASI KELASNYA
         const createdSiswa = await Siswa.findByPk(newSiswa.id, {
           include: [
             {
-              model: User,
-              as: 'user',
-              required: false,
-              attributes: { exclude: ['password_hash'] }
+              model: Kelas,
+              as: "kelas",
+              through: { attributes: [] } // Sertakan data kelas di response
             }
-          ]
+          ],
         });
 
         res.status(201).json({
           success: true,
-          message: 'Siswa berhasil dibuat',
-          data: createdSiswa
+          message: "Siswa berhasil dibuat",
+          data: createdSiswa,
         });
 
       } catch (error) {
         await transaction.rollback();
         
         // Handle unique constraint errors
-        if (error.name === 'SequelizeUniqueConstraintError') {
+        if (error.name === "SequelizeUniqueConstraintError") {
           const field = error.errors[0]?.path;
-          if (field === 'nis') {
-            return res.status(400).json({
-              success: false,
-              message: 'NIS sudah digunakan'
-            });
-          } else if (field === 'nisn') {
-            return res.status(400).json({
-              success: false,
-              message: 'NISN sudah digunakan'
-            });
-          }
+          const msg = field === 'nis' ? 'NIS sudah digunakan' : (field === 'nisn' ? 'NISN sudah digunakan' : error.errors[0].message);
+          return res.status(400).json({ success: false, message: msg });
         }
-        
         throw error;
       }
-
     } catch (error) {
-      console.error('Create siswa error:', error);
-      
-      // Handle database errors
-      if (error.original && error.original.code === '23505') {
-        if (error.fields && error.fields.nis) {
-          return res.status(400).json({
-            success: false,
-            message: 'NIS sudah digunakan'
-          });
-        } else if (error.fields && error.fields.nisn) {
-          return res.status(400).json({
-            success: false,
-            message: 'NISN sudah digunakan'
-          });
-        }
-      }
-      
-      res.status(500).json({
-        success: false,
-        message: 'Terjadi kesalahan server'
-      });
+      console.error("Create siswa error:", error);
+      res.status(500).json({ success: false, message: "Terjadi kesalahan server" });
     }
   },
 
@@ -279,86 +221,69 @@ const siswaController = {
   updateSiswa: async (req, res) => {
     try {
       const { id } = req.params;
-      const { 
-        nama_lengkap, 
-        nis, 
-        nisn, 
-        jenis_kelamin, 
-        tanggal_lahir, 
-        telepon_ortu, 
-        status 
-      } = req.body;
+      
+      // Pisahkan 'kelas' dari sisa data body
+      // Agar 'kelas' tidak ikut di-update ke tabel Siswa (karena tidak ada kolomnya)
+      const { kelas, ...updateData } = req.body;
 
       const siswa = await Siswa.findByPk(id);
       if (!siswa) {
-        return res.status(404).json({
-          success: false,
-          message: 'Siswa tidak ditemukan'
-        });
+        return res.status(404).json({ success: false, message: "Siswa tidak ditemukan" });
       }
 
-      // Check if NIS already exists (excluding current siswa)
-      if (nis && nis !== siswa.nis) {
-        const existingNis = await Siswa.findOne({ 
-          where: { nis },
-          attributes: ['id']
-        });
-        if (existingNis) {
-          return res.status(400).json({
-            success: false,
-            message: 'NIS sudah digunakan'
+      // Cek Unik NIS jika berubah
+      if (updateData.nis && updateData.nis !== siswa.nis) {
+        const existingNis = await Siswa.findOne({ where: { nis: updateData.nis } });
+        if (existingNis) return res.status(400).json({ success: false, message: "NIS sudah digunakan" });
+      }
+      
+      // Cek Unik NISN jika berubah
+      if (updateData.nisn && updateData.nisn !== siswa.nisn) {
+        const existingNisn = await Siswa.findOne({ where: { nisn: updateData.nisn } });
+        if (existingNisn) return res.status(400).json({ success: false, message: "NISN sudah digunakan" });
+      }
+
+      // 1. Update Data Biodata Siswa
+      await siswa.update(updateData);
+
+      // 2. LOGIKA TAMBAHAN: UPDATE KELAS
+      if (kelas) {
+        const kelasInstance = await Kelas.findOne({ where: { nama_kelas: kelas } });
+        
+        if (kelasInstance) {
+          // 'setKelas' akan mengganti relasi lama dengan yang baru
+          // Ini otomatis menghapus entry lama di SiswaDiKelas dan buat baru
+          await siswa.setKelas([kelasInstance], { 
+             through: { semester_id: 1 } // Default semester
           });
         }
       }
 
-      // Check if NISN already exists (excluding current siswa)
-      if (nisn && nisn !== siswa.nisn) {
-        const existingNisn = await Siswa.findOne({ 
-          where: { nisn },
-          attributes: ['id']
-        });
-        if (existingNisn) {
-          return res.status(400).json({
-            success: false,
-            message: 'NISN sudah digunakan'
-          });
-        }
-      }
-
-      await siswa.update({
-        nama_lengkap: nama_lengkap || siswa.nama_lengkap,
-        nis: nis || siswa.nis,
-        nisn: nisn || siswa.nisn,
-        jenis_kelamin: jenis_kelamin || siswa.jenis_kelamin,
-        tanggal_lahir: tanggal_lahir || siswa.tanggal_lahir,
-        telepon_ortu: telepon_ortu || siswa.telepon_ortu,
-        status: status || siswa.status
-      });
-
-      // Get updated siswa
+      // 3. Fetch ulang data terbaru termasuk Kelas baru
       const updatedSiswa = await Siswa.findByPk(id, {
         include: [
           {
             model: User,
-            as: 'user',
-            required: false,
-            attributes: { exclude: ['password_hash'] }
+            as: "user",
+            attributes: { exclude: ["password_hash"] },
+          },
+          {
+             model: Kelas,
+             as: "kelas",
+             through: { attributes: [] } // Include kelas agar frontend langsung update
           }
-        ]
+        ],
       });
 
       res.json({
         success: true,
-        message: 'Siswa berhasil diupdate',
-        data: updatedSiswa
+        message: "Siswa berhasil diupdate",
+        data: updatedSiswa,
       });
 
     } catch (error) {
-      console.error('Update siswa error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Terjadi kesalahan server'
-      });
+      console.error("Update siswa error:", error);
+      res.status(500).json({ success: false, message: "Terjadi kesalahan server" });
     }
   },
 
@@ -372,7 +297,7 @@ const siswaController = {
       if (!siswa) {
         return res.status(404).json({
           success: false,
-          message: 'Siswa tidak ditemukan'
+          message: "Siswa tidak ditemukan",
         });
       }
 
@@ -384,14 +309,14 @@ const siswaController = {
         data: {
           id: siswa.id,
           nama_lengkap: siswa.nama_lengkap,
-          status: siswa.status
-        }
+          status: siswa.status,
+        },
       });
     } catch (error) {
-      console.error('Update siswa status error:', error);
+      console.error("Update siswa status error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -405,7 +330,7 @@ const siswaController = {
       if (!siswa) {
         return res.status(404).json({
           success: false,
-          message: 'Siswa tidak ditemukan'
+          message: "Siswa tidak ditemukan",
         });
       }
 
@@ -425,19 +350,17 @@ const siswaController = {
 
         res.json({
           success: true,
-          message: 'Siswa berhasil dihapus'
+          message: "Siswa berhasil dihapus",
         });
-
       } catch (error) {
         await transaction.rollback();
         throw error;
       }
-
     } catch (error) {
-      console.error('Delete siswa error:', error);
+      console.error("Delete siswa error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -446,13 +369,17 @@ const siswaController = {
   getSiswaStats: async (req, res) => {
     try {
       const totalSiswa = await Siswa.count();
-      const aktifSiswa = await Siswa.count({ where: { status: 'Aktif' } });
-      const lulusSiswa = await Siswa.count({ where: { status: 'Lulus' } });
-      const pindahSiswa = await Siswa.count({ where: { status: 'Pindah' } });
+      const aktifSiswa = await Siswa.count({ where: { status: "Aktif" } });
+      const lulusSiswa = await Siswa.count({ where: { status: "Lulus" } });
+      const pindahSiswa = await Siswa.count({ where: { status: "Pindah" } });
 
       // Stats by gender
-      const lakiLaki = await Siswa.count({ where: { jenis_kelamin: 'Laki-laki' } });
-      const perempuan = await Siswa.count({ where: { jenis_kelamin: 'Perempuan' } });
+      const lakiLaki = await Siswa.count({
+        where: { jenis_kelamin: "Laki-laki" },
+      });
+      const perempuan = await Siswa.count({
+        where: { jenis_kelamin: "Perempuan" },
+      });
 
       res.json({
         success: true,
@@ -461,22 +388,22 @@ const siswaController = {
           by_status: {
             aktif: aktifSiswa,
             lulus: lulusSiswa,
-            pindah: pindahSiswa
+            pindah: pindahSiswa,
           },
           by_gender: {
             laki_laki: lakiLaki,
-            perempuan: perempuan
-          }
-        }
+            perempuan: perempuan,
+          },
+        },
       });
     } catch (error) {
-      console.error('Get siswa stats error:', error);
+      console.error("Get siswa stats error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
-  }
+  },
 };
 
 module.exports = siswaController;

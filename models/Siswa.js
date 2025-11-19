@@ -7,27 +7,27 @@ const Siswa = sequelize.define('Siswa', {
     primaryKey: true,
     autoIncrement: true
   },
-  user_id: {
-    type: DataTypes.INTEGER,
-    unique: true
-  },
   nama_lengkap: {
     type: DataTypes.STRING(100),
     allowNull: false
   },
   nis: {
     type: DataTypes.STRING(30),
-    allowNull: false,
+    allowNull: true,
     unique: true
   },
   nisn: {
     type: DataTypes.STRING(30),
-    allowNull: false,
+    allowNull: true,
     unique: true
   },
   jenis_kelamin: {
     type: DataTypes.ENUM('Laki-laki', 'Perempuan'),
     allowNull: false
+  },
+  tempat_lahir: {
+    type: DataTypes.STRING(100),
+    allowNull: true
   },
   tanggal_lahir: {
     type: DataTypes.DATE,
@@ -36,13 +36,17 @@ const Siswa = sequelize.define('Siswa', {
   telepon_ortu: {
     type: DataTypes.STRING(20)
   },
+  alamat: {
+    type: DataTypes.TEXT
+  },
   status: {
     type: DataTypes.ENUM('Aktif', 'Lulus', 'Pindah'),
     defaultValue: 'Aktif'
   }
 }, 
 {
-  tableName: 'siswa'
+  tableName: 'siswa',
+  timestamps: true
 });
 
 module.exports = Siswa;
