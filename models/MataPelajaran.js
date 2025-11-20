@@ -15,6 +15,22 @@ const MataPelajaran = sequelize.define('MataPelajaran', {
   nama_mapel: {
     type: DataTypes.STRING(100),
     allowNull: false
+  },
+  kelompok: {
+    type: DataTypes.ENUM('Tematik', 'Umum', 'Peminatan', 'Muatan Lokal', 'Lainnya'),
+    allowNull: false
+  }, 
+  kkm: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 0,
+      max: 100
+    }
+  },
+  status: {
+    type: DataTypes.ENUM('Aktif', 'Non-Aktif'),
+    defaultValue: 'Aktif'
   }
 }, {
   tableName: 'mata_pelajaran',

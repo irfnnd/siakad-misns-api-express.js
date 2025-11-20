@@ -1,26 +1,39 @@
-const { MataPelajaran, Pengajaran, Kelas, Pegawai, NilaiRapor } = require('../models');
-const { Op } = require('sequelize');
+const {
+  MataPelajaran,
+  Pengajaran,
+  Kelas,
+  Pegawai,
+  NilaiRapor,
+} = require("../models");
+const { Op } = require("sequelize");
 
 const mataPelajaranController = {
   // Get all mata pelajaran dengan pagination
   getAllMataPelajaran: async (req, res) => {
     try {
-      const { page = 1, limit = 10, search } = req.query;
+      const { page = 1, limit = 10, search, kelompok } = req.query;
       const offset = (page - 1) * limit;
 
       const whereClause = {};
+
+      // Filter Search (Kode atau Nama)
       if (search) {
         whereClause[Op.or] = [
-          { kode_mapel: { [Op.iLike]: `%${search}%` } },
-          { nama_mapel: { [Op.iLike]: `%${search}%` } }
+          { kode_mapel: { [Op.like]: `%${search}%` } }, // Gunakan Op.like untuk kompatibilitas umum (MySQL/Postgres)
+          { nama_mapel: { [Op.like]: `%${search}%` } },
         ];
+      }
+
+      // Filter Kelompok (jika dikirim dari frontend)
+      if (kelompok && kelompok !== "Semua") {
+        whereClause.kelompok = kelompok;
       }
 
       const mataPelajaran = await MataPelajaran.findAndCountAll({
         where: whereClause,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['kode_mapel', 'ASC']]
+        order: [["kode_mapel", "ASC"]],
       });
 
       res.json({
@@ -31,150 +44,63 @@ const mataPelajaranController = {
             currentPage: parseInt(page),
             totalPages: Math.ceil(mataPelajaran.count / limit),
             totalItems: mataPelajaran.count,
-            itemsPerPage: parseInt(limit)
-          }
-        }
+            itemsPerPage: parseInt(limit),
+          },
+        },
       });
     } catch (error) {
-      console.error('Get all mata pelajaran error:', error);
+      console.error("Get all mata pelajaran error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
 
-   // Get mata pelajaran by ID dengan associations yang benar
+  // Get mata pelajaran by ID
   getMataPelajaranById: async (req, res) => {
     try {
       const { id } = req.params;
 
       const mataPelajaran = await MataPelajaran.findByPk(id, {
+        // Include opsional: melihat di kelas mana saja mapel ini diajarkan
         include: [
           {
             model: Pengajaran,
-            as: 'pengajaran', // Gunakan alias yang benar
+            as: "pengajaran",
+            required: false,
             include: [
               {
                 model: Kelas,
-                as: 'kelas',
-                attributes: ['id', 'nama_kelas', 'tingkat']
+                as: "kelas",
+                attributes: ["nama_kelas"],
               },
               {
                 model: Pegawai,
-                as: 'guru',
-                attributes: ['id', 'nama_lengkap', 'nip']
-              }
+                as: "guru",
+                attributes: ["nama_lengkap"],
+              },
             ],
-            required: false
-          }
-        ]
+          },
+        ],
       });
 
       if (!mataPelajaran) {
         return res.status(404).json({
           success: false,
-          message: 'Mata pelajaran tidak ditemukan'
+          message: "Mata pelajaran tidak ditemukan",
         });
       }
 
       res.json({
         success: true,
-        data: mataPelajaran
+        data: mataPelajaran,
       });
     } catch (error) {
-      console.error('Get mata pelajaran by ID error:', error);
+      console.error("Get mata pelajaran by ID error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
-      });
-    }
-  },
-
-  // Get mata pelajaran statistics dengan associations yang benar
-  getMataPelajaranStats: async (req, res) => {
-    try {
-      const totalMapel = await MataPelajaran.count();
-
-      // Count pengajaran per mata pelajaran dengan alias yang benar
-      const mapelWithPengajaranCount = await MataPelajaran.findAll({
-        attributes: [
-          'id',
-          'kode_mapel',
-          'nama_mapel',
-          [MataPelajaran.sequelize.fn('COUNT', MataPelajaran.sequelize.col('pengajaran.id')), 'jumlah_pengajaran']
-        ],
-        include: [
-          {
-            model: Pengajaran,
-            as: 'pengajaran', // Gunakan alias yang benar
-            attributes: [],
-            required: false
-          }
-        ],
-        group: ['MataPelajaran.id', 'MataPelajaran.kode_mapel', 'MataPelajaran.nama_mapel'],
-        raw: true
-      });
-
-      res.json({
-        success: true,
-        data: {
-          total_mapel: totalMapel,
-          detail_mapel: mapelWithPengajaranCount
-        }
-      });
-    } catch (error) {
-      console.error('Get mata pelajaran stats error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Terjadi kesalahan server'
-      });
-    }
-  },
-
-  // Delete mata pelajaran dengan pengecekan yang benar
-  deleteMataPelajaran: async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const mataPelajaran = await MataPelajaran.findByPk(id);
-      if (!mataPelajaran) {
-        return res.status(404).json({
-          success: false,
-          message: 'Mata pelajaran tidak ditemukan'
-        });
-      }
-
-      // Check if mata pelajaran digunakan di pengajaran
-      const pengajaranCount = await Pengajaran.count({ where: { mapel_id: id } });
-      if (pengajaranCount > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam pengajaran'
-        });
-      }
-
-      // Check if mata pelajaran digunakan di nilai rapor (dengan alias baru)
-      const nilaiRaporCount = await NilaiRapor.count({ where: { mapel_id: id } });
-      if (nilaiRaporCount > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam nilai rapor'
-        });
-      }
-
-      await MataPelajaran.destroy({ where: { id } });
-
-      res.json({
-        success: true,
-        message: 'Mata pelajaran berhasil dihapus'
-      });
-
-    } catch (error) {
-      console.error('Delete mata pelajaran error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -182,74 +108,74 @@ const mataPelajaranController = {
   // Create new mata pelajaran
   createMataPelajaran: async (req, res) => {
     try {
-      const { kode_mapel, nama_mapel } = req.body;
+      const { kode_mapel, nama_mapel, kelompok, kkm, status } = req.body;
 
-      // Validasi manual
+      // 1. Validasi Manual
       const errors = [];
-      
-      if (!kode_mapel) errors.push('Kode mapel harus diisi');
-      if (!nama_mapel) errors.push('Nama mapel harus diisi');
+      if (!kode_mapel) errors.push("Kode mapel harus diisi");
+      if (!nama_mapel) errors.push("Nama mapel harus diisi");
+      if (!kelompok) errors.push("Kelompok mapel harus diisi");
+      if (kkm === undefined || kkm === null || kkm === "")
+        errors.push("KKM harus diisi");
 
       if (errors.length > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Data tidak valid',
-          errors: errors
+          message: "Data tidak valid",
+          errors: errors,
         });
       }
 
-      // Check if kode_mapel already exists
-      const existingKode = await MataPelajaran.findOne({ where: { kode_mapel } });
+      // Validasi Range KKM
+      if (kkm < 0 || kkm > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "KKM harus antara 0 - 100",
+        });
+      }
+
+      // 2. Cek Duplikat Kode Mapel
+      const existingKode = await MataPelajaran.findOne({
+        where: { kode_mapel },
+      });
       if (existingKode) {
         return res.status(400).json({
           success: false,
-          message: 'Kode mapel sudah digunakan'
+          message: "Kode mata pelajaran sudah digunakan",
         });
       }
 
-      // Check if nama_mapel already exists
-      const existingNama = await MataPelajaran.findOne({ where: { nama_mapel } });
-      if (existingNama) {
-        return res.status(400).json({
-          success: false,
-          message: 'Nama mapel sudah digunakan'
-        });
-      }
-
-      // Create mata pelajaran
+      // 3. Create Data
       const newMataPelajaran = await MataPelajaran.create({
-        kode_mapel: kode_mapel.toUpperCase(),
-        nama_mapel
+        kode_mapel: kode_mapel.toUpperCase(), // Standardisasi kode jadi uppercase
+        nama_mapel,
+        kelompok,
+        kkm: parseInt(kkm),
+        status: status || 'Aktif',
       });
 
       res.status(201).json({
         success: true,
-        message: 'Mata pelajaran berhasil dibuat',
-        data: newMataPelajaran
+        message: "Mata pelajaran berhasil dibuat",
+        data: newMataPelajaran,
       });
-
     } catch (error) {
-      console.error('Create mata pelajaran error:', error);
-      
-      // Handle unique constraint errors
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        const field = error.errors[0]?.path;
-        if (field === 'kode_mapel') {
-          return res.status(400).json({
-            success: false,
-            message: 'Kode mapel sudah digunakan'
-          });
-        } else if (field === 'nama_mapel') {
-          return res.status(400).json({
-            success: false,
-            message: 'Nama mapel sudah digunakan'
-          });
-        }
+      console.error("Create mata pelajaran error:", error);
+
+      // Handle Validasi Sequelize (misal Enum atau Unique)
+      if (
+        error.name === "SequelizeValidationError" ||
+        error.name === "SequelizeUniqueConstraintError"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: error.errors[0].message,
+        });
       }
-      
+
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -258,60 +184,50 @@ const mataPelajaranController = {
   updateMataPelajaran: async (req, res) => {
     try {
       const { id } = req.params;
-      const { kode_mapel, nama_mapel } = req.body;
+      const { kode_mapel, nama_mapel, kelompok, kkm, status } = req.body;
 
       const mataPelajaran = await MataPelajaran.findByPk(id);
       if (!mataPelajaran) {
         return res.status(404).json({
           success: false,
-          message: 'Mata pelajaran tidak ditemukan'
+          message: "Mata pelajaran tidak ditemukan",
         });
       }
 
-      // Check if kode_mapel already exists (excluding current)
+      // 1. Cek Unik Kode Mapel (jika berubah)
       if (kode_mapel && kode_mapel !== mataPelajaran.kode_mapel) {
-        const existingKode = await MataPelajaran.findOne({ 
+        const existingKode = await MataPelajaran.findOne({
           where: { kode_mapel },
-          attributes: ['id']
         });
         if (existingKode) {
           return res.status(400).json({
             success: false,
-            message: 'Kode mapel sudah digunakan'
+            message: "Kode mata pelajaran sudah digunakan",
           });
         }
       }
 
-      // Check if nama_mapel already exists (excluding current)
-      if (nama_mapel && nama_mapel !== mataPelajaran.nama_mapel) {
-        const existingNama = await MataPelajaran.findOne({ 
-          where: { nama_mapel },
-          attributes: ['id']
-        });
-        if (existingNama) {
-          return res.status(400).json({
-            success: false,
-            message: 'Nama mapel sudah digunakan'
-          });
-        }
-      }
-
+      // 2. Update Data
       await mataPelajaran.update({
-        kode_mapel: kode_mapel ? kode_mapel.toUpperCase() : mataPelajaran.kode_mapel,
-        nama_mapel: nama_mapel || mataPelajaran.nama_mapel
+        kode_mapel: kode_mapel
+          ? kode_mapel.toUpperCase()
+          : mataPelajaran.kode_mapel,
+        nama_mapel: nama_mapel || mataPelajaran.nama_mapel,
+        kelompok: kelompok || mataPelajaran.kelompok,
+        kkm: kkm !== undefined ? parseInt(kkm) : mataPelajaran.kkm,
+        status: status !== undefined ? status : mataPelajaran.status,
       });
 
       res.json({
         success: true,
-        message: 'Mata pelajaran berhasil diupdate',
-        data: mataPelajaran
+        message: "Mata pelajaran berhasil diupdate",
+        data: mataPelajaran,
       });
-
     } catch (error) {
-      console.error('Update mata pelajaran error:', error);
+      console.error("Update mata pelajaran error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
@@ -325,46 +241,74 @@ const mataPelajaranController = {
       if (!mataPelajaran) {
         return res.status(404).json({
           success: false,
-          message: 'Mata pelajaran tidak ditemukan'
+          message: "Mata pelajaran tidak ditemukan",
         });
       }
 
-      // Check if mata pelajaran digunakan di pengajaran
-      const pengajaranCount = await Pengajaran.count({ where: { mapel_id: id } });
+      // 1. Cek Relasi Pengajaran
+      const pengajaranCount = await Pengajaran.count({
+        where: { mapel_id: id },
+      });
       if (pengajaranCount > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam pengajaran'
+          message:
+            "Gagal hapus: Mapel ini masih aktif digunakan dalam pengajaran (jadwal/guru).",
         });
       }
 
-      // Check if mata pelajaran digunakan di nilai rapor
-      const nilaiRaporCount = await NilaiRapor.count({ where: { mapel_id: id } });
+      // 2. Cek Relasi Nilai Rapor (Jika ada tabel NilaiRapor)
+      const nilaiRaporCount = await NilaiRapor.count({
+        where: { mapel_id: id },
+      });
       if (nilaiRaporCount > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Tidak dapat menghapus mata pelajaran yang masih digunakan dalam nilai rapor'
+          message:
+            "Gagal hapus: Mapel ini sudah memiliki nilai rapor tersimpan.",
         });
       }
 
-      await MataPelajaran.destroy({ where: { id } });
+      // 3. Hapus
+      await mataPelajaran.destroy();
 
       res.json({
         success: true,
-        message: 'Mata pelajaran berhasil dihapus'
+        message: "Mata pelajaran berhasil dihapus",
       });
-
     } catch (error) {
-      console.error('Delete mata pelajaran error:', error);
+      console.error("Delete mata pelajaran error:", error);
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
   },
 
+  // Stats
+  getMataPelajaranStats: async (req, res) => {
+    try {
+      const totalMapel = await MataPelajaran.count();
+      // Hitung per kelompok
+      const tematik = await MataPelajaran.count({
+        where: { kelompok: "Tematik" },
+      });
+      const umum = await MataPelajaran.count({ where: { kelompok: "Umum" } });
+      const muatanLokal = await MataPelajaran.count({
+        where: { kelompok: "Muatan Lokal" },
+      }); // Sesuaikan enum jika beda
 
-  // Search mata pelajaran
+      res.json({
+        success: true,
+        data: {
+          total_mapel: totalMapel,
+          detail: { tematik, umum, muatan_lokal: muatanLokal },
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Error server" });
+    }
+  },
   searchMataPelajaran: async (req, res) => {
     try {
       const { q } = req.query;
@@ -372,7 +316,7 @@ const mataPelajaranController = {
       if (!q) {
         return res.status(400).json({
           success: false,
-          message: 'Query pencarian harus diisi'
+          message: "Query pencarian harus diisi",
         });
       }
 
@@ -380,25 +324,25 @@ const mataPelajaranController = {
         where: {
           [Op.or]: [
             { kode_mapel: { [Op.iLike]: `%${q}%` } },
-            { nama_mapel: { [Op.iLike]: `%${q}%` } }
-          ]
+            { nama_mapel: { [Op.iLike]: `%${q}%` } },
+          ],
         },
         limit: 10,
-        order: [['kode_mapel', 'ASC']]
+        order: [["kode_mapel", "ASC"]],
       });
-
       res.json({
         success: true,
-        data: mataPelajaran
+        data: mataPelajaran,
       });
     } catch (error) {
-      console.error('Search mata pelajaran error:', error);
+      console.error("Search mata pelajaran error:", error);
+
       res.status(500).json({
         success: false,
-        message: 'Terjadi kesalahan server'
+        message: "Terjadi kesalahan server",
       });
     }
-  }
+  },
 };
 
 module.exports = mataPelajaranController;
