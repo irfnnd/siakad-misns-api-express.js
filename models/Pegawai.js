@@ -9,7 +9,7 @@ const Pegawai = sequelize.define('Pegawai', {
   },
   user_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     unique: true
   },
   nama_lengkap: {

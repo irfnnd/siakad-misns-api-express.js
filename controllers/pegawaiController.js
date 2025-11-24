@@ -212,18 +212,44 @@ const deletePegawai = async (req, res) => {
 
     await pegawai.destroy();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Pegawai berhasil dihapus'
     });
+
   } catch (error) {
-    console.error('Delete pegawai error:', error);
-    res.status(500).json({
+    console.error("Delete pegawai error:", error);
+
+    // Validasi FK — code 23503
+    if (error?.original?.code === "23503") {
+      const constraint = error?.original?.constraint;
+
+      // --- Deteksi berdasarkan constraint name ---
+      let message = "Pegawai tidak dapat dihapus karena masih digunakan pada data lain.";
+
+      if (constraint === "jadwal_pelajaran_guru_id_fkey") {
+        message = "Pegawai tidak dapat dihapus karena masih menjadi guru pada jadwal pelajaran.";
+      }
+
+      if (constraint === "kelas_wali_kelas_id_fkey") {
+        message = "Pegawai tidak dapat dihapus karena masih menjadi wali kelas pada data kelas.";
+      }
+
+      return res.status(400).json({
+        success: false,
+        message
+      });
+    }
+
+    // Fallback — error server umum
+    return res.status(500).json({
       success: false,
-      message: 'Terjadi kesalahan server'
+      message: "Terjadi kesalahan server."
     });
   }
 };
+
+
 
 module.exports = {
   getAllPegawai,
