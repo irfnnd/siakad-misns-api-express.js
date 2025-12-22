@@ -146,6 +146,19 @@ createSiswa: async (req, res) => {
         if (existingNisn) return res.status(400).json({ success: false, message: "NISN sudah digunakan" });
       }
 
+      // --- PERBAIKAN 1: Cari Semester Aktif ---
+      // Agar tidak hardcode '1', kita cari semester yang statusnya 'Aktif'
+      let activeSemesterId = 1; // Default fallback
+      const activeSemester = await Semester.findOne({ where: { status: 'Aktif' } });
+      
+      if (activeSemester) {
+        activeSemesterId = activeSemester.id;
+      } else {
+        // Opsional: Return error jika sistem sangat ketat
+        // return res.status(400).json({ success: false, message: "Belum ada Semester Aktif. Harap atur di menu Kurikulum." });
+        console.warn("⚠️ Tidak ada semester aktif ditemukan, menggunakan ID default: 1");
+      }
+
       // Mulai Transaksi Database
       const transaction = await Siswa.sequelize.transaction();
 
@@ -153,6 +166,8 @@ createSiswa: async (req, res) => {
         // 1. Buat Data Siswa
         const newSiswa = await Siswa.create(
           {
+            // --- PERBAIKAN 2: Handle user_id kosong ---
+            user_id: user_id || null, 
             nama_lengkap,
             nis,
             nisn,
@@ -172,10 +187,10 @@ createSiswa: async (req, res) => {
           const kelasInstance = await Kelas.findOne({ where: { nama_kelas: kelas } });
           
           if (kelasInstance) {
-            // Gunakan method magic Sequelize 'setKelas' (karena relasi many-to-many)
-            // Kita set semester_id: 1 sebagai default sementara
+            // Gunakan method magic Sequelize 'setKelas'
+            // --- PERBAIKAN 3: Gunakan activeSemesterId ---
             await newSiswa.setKelas([kelasInstance], { 
-                through: { semester_id: 1 }, 
+                through: { semester_id: activeSemesterId }, 
                 transaction 
             });
           }
@@ -186,6 +201,12 @@ createSiswa: async (req, res) => {
         // 3. Ambil data siswa yang baru dibuat BESERTA RELASI KELASNYA
         const createdSiswa = await Siswa.findByPk(newSiswa.id, {
           include: [
+            {
+              model: User,
+              as: "user",
+              required: false,
+              attributes: { exclude: ["password_hash"] },
+            },
             {
               model: Kelas,
               as: "kelas",
@@ -209,6 +230,12 @@ createSiswa: async (req, res) => {
           const msg = field === 'nis' ? 'NIS sudah digunakan' : (field === 'nisn' ? 'NISN sudah digunakan' : error.errors[0].message);
           return res.status(400).json({ success: false, message: msg });
         }
+        
+        // Handle Foreign Key Error (Misal Semester ID 1 tidak ada dan Fallback gagal)
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+           return res.status(400).json({ success: false, message: "Terjadi kesalahan data referensi (Semester/Kelas tidak valid)." });
+        }
+
         throw error;
       }
     } catch (error) {
