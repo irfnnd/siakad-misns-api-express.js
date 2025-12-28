@@ -18,6 +18,12 @@ const Penilaian = sequelize.define('Penilaian', {
   tipe: {
     type: DataTypes.ENUM('Harian', 'PTS', 'PAS'),
     allowNull: false
+  },
+    // --- KOLOM BARU ---
+  kategori: {
+    type: DataTypes.ENUM('Pengetahuan', 'Keterampilan'),
+    allowNull: false,
+    defaultValue: 'Pengetahuan' 
   }
 }, {
   tableName: 'penilaian',
