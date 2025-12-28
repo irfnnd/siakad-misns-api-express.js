@@ -24,6 +24,7 @@ router.post('/generate', authorize('Admin', 'Guru'), raporController.generateRap
 // Create new rapor
 router.post('/', authorize('Admin', 'Guru'), raporController.createRapor);
 
+router.post('/rapor/batch', raporController.saveNilaiRaporBatch);
 // Update rapor
 router.put('/:id', authorize('Admin', 'Guru'), raporController.updateRapor);
 

@@ -10,26 +10,45 @@ const getAllRapor = async (req, res) => {
     if (siswa_id) whereClause.siswa_id = siswa_id;
     if (semester_id) whereClause.semester_id = semester_id;
 
-    const includeClause = [
+const includeClause = [
+  {
+    model: Siswa,
+    as: 'siswa',
+    attributes: ['id', 'nama_lengkap', 'nis', 'nisn']
+  },
+  {
+    model: Semester,
+    as: 'semester',
+    attributes: ['id', 'nama', 'status'],
+    include: [
       {
-        model: Siswa,
-        as: 'siswa',
-        attributes: ['id', 'nama_lengkap', 'nis', 'nisn', 'jenis_kelamin']
-      },
-      {
-        model: Semester,
-        as: 'semester',
-        attributes: ['id', 'nama', 'status'],
-        include: [
-          {
-            model: TahunAjaran,
-            as: 'tahun_ajaran',
-            attributes: ['id', 'tahun', 'status'],
-            where: tahun_ajaran_id ? { id: tahun_ajaran_id } : undefined
-          }
-        ]
+        model: TahunAjaran,
+        as: 'tahun_ajaran',
+        attributes: ['id', 'tahun', 'status'],
+        where: tahun_ajaran_id ? { id: tahun_ajaran_id } : undefined
       }
-    ];
+    ]
+  },
+  {
+    model: NilaiRapor,
+    as: 'nilai_rapor',
+    attributes: [
+      'id',
+      'nilai_pengetahuan',
+      'predikat_pengetahuan',
+      'nilai_keterampilan',
+      'predikat_keterampilan'
+    ],
+    include: [
+      {
+        model: MataPelajaran,
+        as: 'mata_pelajaran',
+        attributes: ['id', 'nama_mapel']
+      }
+    ]
+  }
+];
+
 
     // Filter by kelas melalui SiswaDiKelas
     if (kelas_id) {
@@ -128,6 +147,81 @@ const getRaporById = async (req, res) => {
       success: false,
       message: 'Terjadi kesalahan server'
     });
+  }
+};
+
+const saveNilaiRaporBatch = async (req, res) => {
+  const transaction = await Rapor.sequelize.transaction();
+  try {
+    const { 
+        pengajaran_id, // Opsional, untuk validasi
+        kelas_id, 
+        semester_id, 
+        mapel_id, 
+        data_nilai // Array: [{ siswa_id, nilai_pengetahuan, predikat_p, deskripsi_p, ... }]
+    } = req.body;
+
+    if (!data_nilai || !Array.isArray(data_nilai) || data_nilai.length === 0) {
+        return res.status(400).json({ success: false, message: "Data nilai kosong" });
+    }
+
+    // Loop setiap siswa untuk update/create nilai rapor
+    for (const item of data_nilai) {
+        // 1. Cari atau Buat Rapor Induk untuk siswa ini di semester ini
+        let rapor = await Rapor.findOne({
+            where: { 
+                siswa_id: item.siswa_id, 
+                semester_id: semester_id 
+            },
+            transaction
+        });
+
+        if (!rapor) {
+            rapor = await Rapor.create({
+                siswa_id: item.siswa_id,
+                semester_id: semester_id,
+                kelas_id: kelas_id,
+                catatan_wali_kelas: '', // Default
+                status_kenaikan: ''
+            }, { transaction });
+        }
+
+        // 2. Cari atau Buat Nilai Mapel (NilaiRapor)
+        const existingNilai = await NilaiRapor.findOne({
+            where: {
+                rapor_id: rapor.id,
+                mapel_id: mapel_id
+            },
+            transaction
+        });
+
+        const payloadNilai = {
+            nilai_pengetahuan: item.nilai_pengetahuan,
+            predikat_pengetahuan: item.predikat_pengetahuan,
+            deskripsi_pengetahuan: item.deskripsi_pengetahuan,
+            nilai_keterampilan: item.nilai_keterampilan,
+            predikat_keterampilan: item.predikat_keterampilan,
+            deskripsi_keterampilan: item.deskripsi_keterampilan
+        };
+
+        if (existingNilai) {
+            await existingNilai.update(payloadNilai, { transaction });
+        } else {
+            await NilaiRapor.create({
+                rapor_id: rapor.id,
+                mapel_id: mapel_id,
+                ...payloadNilai
+            }, { transaction });
+        }
+    }
+
+    await transaction.commit();
+    res.json({ success: true, message: 'Nilai berhasil disimpan ke Rapor' });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Save nilai rapor batch error:', error);
+    res.status(500).json({ success: false, message: 'Gagal menyimpan nilai ke rapor' });
   }
 };
 
@@ -456,6 +550,7 @@ const generateRapor = async (req, res) => {
 
 module.exports = {
   getAllRapor,
+  saveNilaiRaporBatch,
   getRaporById,
   getRaporBySiswa,
   getRaporBySiswaSemester,
