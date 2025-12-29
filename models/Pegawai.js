@@ -21,10 +21,22 @@ const Pegawai = sequelize.define('Pegawai', {
     allowNull: false,
     unique: true
   },
+
+  jenis_kelamin: {
+    type: DataTypes.ENUM('Laki-laki', 'Perempuan'),
+    allowNull: true
+  },
+
   jabatan: {
     type: DataTypes.STRING(50),
     allowNull: false
   },
+
+  tanggal_lahir: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+
   telepon: {
     type: DataTypes.STRING(20)
   },

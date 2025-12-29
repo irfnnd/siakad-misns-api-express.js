@@ -89,7 +89,9 @@ const createPegawai = async (req, res) => {
       user_id, 
       nama_lengkap, 
       nip, 
+      jenis_kelamin,
       jabatan, 
+      tanggal_lahir,
       telepon, 
       alamat 
     } = req.body;
@@ -107,7 +109,9 @@ const createPegawai = async (req, res) => {
       user_id,
       nama_lengkap,
       nip,
+      jenis_kelamin,
       jabatan,
+      tanggal_lahir,
       telepon,
       alamat
     });
@@ -143,6 +147,8 @@ const updatePegawai = async (req, res) => {
       nama_lengkap, 
       nip, 
       jabatan, 
+      jenis_kelamin,
+      tanggal_lahir,
       telepon, 
       alamat 
     } = req.body;
@@ -169,7 +175,9 @@ const updatePegawai = async (req, res) => {
     await pegawai.update({
       nama_lengkap: nama_lengkap || pegawai.nama_lengkap,
       nip: nip || pegawai.nip,
+      jenis_kelamin: jenis_kelamin || pegawai.jenis_kelamin,
       jabatan: jabatan || pegawai.jabatan,
+      tanggal_lahir: tanggal_lahir || pegawai.tanggal_lahir,
       telepon: telepon || pegawai.telepon,
       alamat: alamat || pegawai.alamat
     });

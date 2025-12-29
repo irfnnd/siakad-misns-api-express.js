@@ -36,8 +36,10 @@ const includeClause = [
       'id',
       'nilai_pengetahuan',
       'predikat_pengetahuan',
+      'deskripsi_pengetahuan',
       'nilai_keterampilan',
-      'predikat_keterampilan'
+      'predikat_keterampilan',
+      'deskripsi_keterampilan'
     ],
     include: [
       {
