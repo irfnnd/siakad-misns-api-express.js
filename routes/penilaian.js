@@ -29,5 +29,4 @@ router.put('/:id', authorize('Admin', 'Guru'), penilaianController.updatePenilai
 
 // Delete penilaian
 router.delete('/:id', authorize('Admin', 'Guru'), penilaianController.deletePenilaian);
-
 module.exports = router;
