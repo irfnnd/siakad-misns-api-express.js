@@ -22,12 +22,12 @@ router.get('/', authorize('Admin', 'Guru'), jadwalPelajaranController.getAllJadw
 router.get('/:id', authorize('Admin', 'Guru'), jadwalPelajaranController.getJadwalPelajaranById);
 
 // Create new jadwal pelajaran (Admin only)
-router.post('/', authorize('Admin'), jadwalPelajaranController.createJadwalPelajaran);
+router.post('/', authorize('Admin', 'Guru'), jadwalPelajaranController.createJadwalPelajaran);
 
-// Update jadwal pelajaran (Admin only)
-router.put('/:id', authorize('Admin'), jadwalPelajaranController.updateJadwalPelajaran);
+// Update jadwal pelajaran (Admin and Guru)
+router.put('/:id', authorize('Admin', 'Guru'), jadwalPelajaranController.updateJadwalPelajaran);
 
 // Delete jadwal pelajaran (Admin only)
-router.delete('/:id', authorize('Admin'), jadwalPelajaranController.deleteJadwalPelajaran);
+router.delete('/:id', authorize('Admin', 'Guru'), jadwalPelajaranController.deleteJadwalPelajaran);
 
 module.exports = router;
