@@ -34,7 +34,7 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  origin: process.env.CORS_ORIGIN || 'https://siakad-mis-nurussholihin-react.vercel.app',
   credentials: true
 }));
 app.use(morgan('combined'));
