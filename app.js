@@ -30,7 +30,14 @@ const nilaiEkstrakurikulerRoutes = require('./routes/nilaiEkstrakurikuler');
 
 
 const app = express();
+try {
+  require('pg');
+  require('pg-hstore');
+} catch (e) {
+  console.log('PG module bundling trick');
+}
 
+const express = require('express');
 // Middleware
 app.use(helmet());
 app.use(cors({
