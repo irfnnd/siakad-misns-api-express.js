@@ -1,18 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "node_modules/pg/**",
-          "node_modules/pg-hstore/**",
-          "node_modules/retry-as-promised/**"
-        ]
-      }
-    }
-  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "api/index.js" }
   ]
