@@ -37,7 +37,6 @@ try {
   console.log('PG module bundling trick');
 }
 
-const express = require('express');
 // Middleware
 app.use(helmet());
 app.use(cors({
